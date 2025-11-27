@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FS Mapper - Concept Visualization</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use Inter font -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+        }
+
+        .font-mono {
+            font-family: 'Space Mono', monospace;
+        }
+    </style>
+</head>
+
+<body class="bg-black text-white overflow-hidden">
+
+    <div id="app" class="flex flex-col md:flex-row h-screen w-full font-mono">
+
+        <!-- LEFT SIDEBAR: Controls & Input -->
+        <div
+            class="w-full md:w-1/3 h-1/3 md:h-full border-b md:border-b-0 md:border-r border-white flex flex-col p-4 bg-black">
+            <div class="flex items-center gap-2 mb-4 border-b border-white pb-2">
+                <!-- Icon for Terminal (using inline SVG) -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="lucide lucide-terminal">
+                    <polyline points="4 17 10 11 4 5" />
+                    <line x1="12" x2="20" y1="19" y2="19" />
+                </svg>
+                <h1 class="text-xl font-bold tracking-wider">FS_MAPPER_V2</h1>
+            </div>
+
+            <p class="text-xs text-gray-400 mb-2">INPUT SYLLABUS / TOPICS:</p>
+            <textarea id="inputText"
+                class="flex-1 bg-gray-900 border border-gray-700 p-3 text-sm focus:outline-none focus:border-white resize-none text-gray-300 font-mono transition-colors focus:bg-gray-800"
+                placeholder="Enter text describing file system concepts...">File Concept, User’s and System Programmer’s view of File System, Hard Disk Organization, Disk Formatting and File System Creation, Different Modules of a File System, Disk Space Allocation Methods – Contiguous, Linked, Indexed. Disk Partitioning and Mounting; Directory Structures, File Protection; Virtual and Remote File Systems. Case Studies of File Systems being used in Unix/Linux & Windows; System Calls used in these Operating Systems for file management.</textarea>
+
+            <div class="mt-4 flex flex-col gap-2">
+                <div id="errorDisplay" class="hidden text-red-500 text-xs p-2 border border-red-900 bg-red-900/20">
+                </div>
+
+                <button id="generateButton" onclick="handleGenerate()"
+                    class="flex items-center justify-center gap-2 py-3 border border-white transition-all bg-white text-black hover:bg-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-refresh-cw">
+                        <path d="M21 12a9 9 0 0 0-9-9c-2.4 0-4.6 1-6.3 2.7L3 8" />
+                        <path d="M3 12a9 9 0 0 0 9 9c2.4 0 4.6-1 6.3-2.7L21 16" />
+                        <path d="M17 17v4h4" />
+                        <path d="M3 8h4V4" />
+                    </svg>
+                    <span>GENERATE TREE</span>
+                </button>
+            </div>
+
+            <div class="mt-4 text-xs text-gray-500 text-center">
+                POWERED BY GEMINI FLASH <br />
+                RENDERING: SVG VECTOR ENGINE
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL: Visualization Canvas -->
+        <div id="canvasContainer" class="w-full md:w-2/3 h-2/3 md:h-full relative bg-black overflow-hidden">
+            <div class="absolute top-4 left-4 z-10 pointer-events-none">
+                <div class="bg-black border border-white px-2 py-1 text-xs text-white inline-block">
+                    MODE: INTERACTIVE VIEW
+                </div>
+            </div>
+
+            <!-- Zoom & Download Controls -->
+            <div class="absolute top-4 right-4 flex gap-2 z-10">
+                <button onclick="zoomIn()"
+                    class="p-2 bg-black border border-gray-700 text-white hover:bg-gray-900 rounded-md transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-zoom-in">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" x2="16.65" y1="21" y2="16.65" />
+                        <line x1="11" x2="11" y1="8" y2="14" />
+                        <line x1="8" x2="14" y1="11" y2="11" />
+                    </svg>
+                </button>
+                <button onclick="zoomOut()"
+                    class="p-2 bg-black border border-gray-700 text-white hover:bg-gray-900 rounded-md transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-zoom-out">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" x2="16.65" y1="21" y2="16.65" />
+                        <line x1="8" x2="14" y1="11" y2="11" />
+                    </svg>
+                </button>
+                <button onclick="downloadTreeAsPNG()"
+                    class="p-2 bg-black border border-gray-700 text-white hover:bg-gray-900 rounded-md transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-download">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" x2="12" y1="15" y2="3" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Helper Instructions -->
+            <div class="absolute bottom-4 right-4 z-10 pointer-events-none text-right">
+                <div class="text-gray-500 text-xs">SCROLL TO ZOOM • DRAG TO PAN</div>
+                <div class="text-[#00ff9d] text-xs font-bold animate-pulse">HOVER NODES FOR DETAILS</div>
+            </div>
+
+            <!-- Tooltip (Use opacity-0 and invisible for smooth, reliable hide/show) -->
+            <div id="tooltip"
+                class="absolute z-50 pointer-events-none transition-opacity duration-300 opacity-0 invisible"
+                style="max-width: 300px;">
+                <div
+                    class="bg-black border border-[#00ff9d] p-3 rounded-br-xl rounded-tr-md rounded-bl-md shadow-[0_0_15px_rgba(0,255,157,0.3)]">
+                    <div class="text-[#00ff9d] text-xs font-bold mb-1 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="lucide lucide-info">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 16v-4" />
+                            <path d="M12 8h.01" />
+                        </svg>
+                        DEFINITION
+                    </div>
+                    <p id="tooltipText" class="text-white text-xs leading-relaxed font-mono"></p>
+                </div>
+            </div>
+
+            <!-- SVG Container -->
+            <svg id="treeSvg" width="100%" height="100%" class="cursor-grab">
+                <defs>
+                    <!-- Glow Filter -->
+                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="2" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                <g id="treeGroup" transform="translate(50, 50) scale(0.8)"></g>
+            </svg>
+
+            <!-- Initial Placeholder -->
+            <div id="initialPlaceholder"
+                class="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+                    class="lucide lucide-share-2 mb-4 opacity-50">
+                    <circle cx="18" cy="5" r="3" />
+                    <circle cx="6" cy="12" r="3" />
+                    <circle cx="18" cy="19" r="3" />
+                    <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" />
+                    <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />
+                </svg>
+                <p>WAITING FOR DATA STREAM...</p>
+                <p class="text-xs mt-2 text-gray-700">Paste text on the left and hit Generate</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- API CONFIGURATION ---
+        const apiKey = "AIzaSyDxUnouKpPRoH4zPlyke6EafAMPyvfsjqM";
+        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
+        const SYSTEM_PROMPT = `
+You are a computer science expert specialized in Operating Systems. 
+Your task is to take unstructured text about file systems and convert it into a hierarchical JSON tree structure.
+The root node should be the main topic (e.g., "File System").
+Output strictly valid JSON. 
+Format: { "name": "Topic Name", "description": "A concise (10-15 words) definition of this specific concept.", "children": [ { "name": "Subtopic", "description": "...", "children": [] } ] }
+Do not wrap in markdown code blocks. Do not add explanation. Just the JSON.
+`;
+
+        // --- DOM Elements ---
+        const inputTextarea = document.getElementById('inputText');
+        const generateButton = document.getElementById('generateButton');
+        const errorDisplay = document.getElementById('errorDisplay');
+        const treeSvg = document.getElementById('treeSvg');
+        const treeGroup = document.getElementById('treeGroup');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const initialPlaceholder = document.getElementById('initialPlaceholder');
+        const tooltip = document.getElementById('tooltip');
+        const tooltipText = document.getElementById('tooltipText');
+
+        // --- State Variables ---
+        let treeData = null;
+        let nodes = [];
+        let links = [];
+        let transform = { x: 50, y: 50, k: 0.8 };
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let highlightedIds = new Set();
+        let hoveredNodeId = null;
+
+        // --- Layout Functions ---
+
+        /**
+         * Calculates the tree layout (horizontal, simple Reingold-Tilford-ish).
+         * @param {Object} root - The root node of the JSON data.
+         * @returns {Object} { nodes, links, width, height }
+         */
+        function calculateLayout(root) {
+            let idCounter = 0;
+            const nodeList = [];
+            const linkList = [];
+            let leafCounter = 0;
+
+            const calculateLeafY = () => (leafCounter++) * 70; // Vertical spacing
+
+            const traverse = (node, depth, parentId) => {
+                const id = idCounter++;
+                const processedNode = {
+                    id,
+                    name: node.name,
+                    description: node.description || "No description available.",
+                    depth,
+                    x: depth * 280, // Horizontal spacing
+                    y: 0,
+                    parentId,
+                    children: [] // Will store references to processed children
+                };
+
+                nodeList.push(processedNode);
+                if (parentId !== null) {
+                    linkList.push({ source: parentId, target: id });
+                }
+
+                if (node.children && node.children.length > 0) {
+                    let childYSum = 0;
+                    node.children.forEach(child => {
+                        const childNode = traverse(child, depth + 1, id);
+                        processedNode.children.push(childNode);
+                        childYSum += childNode.y;
+                    });
+                    processedNode.y = childYSum / node.children.length; // Center parent
+                } else {
+                    processedNode.y = calculateLeafY(); // Position leaf node
+                }
+                return processedNode;
+            };
+
+            const processedRoot = traverse(root, 0, null);
+
+            // Shift everything so Y starts reasonably
+            const minY = nodeList.length > 0 ? Math.min(...nodeList.map(n => n.y)) : 0;
+            nodeList.forEach(n => n.y -= minY - 100);
+
+            const maxY = nodeList.length > 0 ? Math.max(...nodeList.map(n => n.y)) : 0;
+            const maxX = nodeList.length > 0 ? Math.max(...nodeList.map(n => n.x)) : 0;
+
+            return { nodes: nodeList, links: linkList, width: maxX + 400, height: maxY + 200, processedRoot: processedRoot };
+        }
+
+        /**
+         * Draws a smooth Bezier curve path between two nodes.
+         */
+        function drawPath(sourceId, targetId) {
+            const source = nodes.find(n => n.id === sourceId);
+            const target = nodes.find(n => n.id === targetId);
+            if (!source || !target) return "";
+
+            const deltaX = target.x - source.x;
+            const controlPointX = source.x + deltaX * 0.4;
+
+            return `M ${source.x} ${source.y} 
+                    C ${controlPointX} ${source.y}, 
+                      ${controlPointX} ${target.y}, 
+                      ${target.x} ${target.y}`;
+        }
+
+        // --- Rendering and Interactivity ---
+
+        /**
+         * Redraws the entire SVG tree structure.
+         */
+        function renderTree() {
+            // 1. Clear previous content
+            treeGroup.innerHTML = '';
+
+            // 2. Render Links
+            links.forEach((link, i) => {
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+
+                // Determine highlight state
+                const isHighlighted = highlightedIds.has(link.source) && highlightedIds.has(link.target);
+                const isDimmed = hoveredNodeId !== null && !isHighlighted;
+
+                path.setAttribute('d', drawPath(link.source, link.target));
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke', isHighlighted ? "#00ff9d" : "#444");
+                path.setAttribute('stroke-width', isHighlighted ? 2.5 : 1.5);
+                path.style.transition = 'all 0.3s ease-in-out';
+                path.style.opacity = isDimmed ? 0.2 : (isHighlighted ? 1 : 0.6);
+                if (isHighlighted) {
+                    path.setAttribute('filter', 'url(#glow)');
+                }
+
+                treeGroup.appendChild(path);
+            });
+
+            // 3. Render Nodes
+            nodes.forEach((node) => {
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                g.setAttribute('transform', `translate(${node.x}, ${node.y})`);
+                g.setAttribute('data-node-id', node.id);
+                g.setAttribute('data-description', node.description);
+                g.setAttribute('data-name', node.name);
+                g.classList.add('cursor-pointer');
+                g.style.transition = 'opacity 0.3s ease';
+
+                const isHighlighted = highlightedIds.has(node.id);
+                const isHovered = hoveredNodeId === node.id;
+                const isDimmed = hoveredNodeId !== null && !isHighlighted;
+                g.style.opacity = isDimmed ? 0.3 : 1;
+
+                // --- Connection Dot (Circle) ---
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute('r', isHovered ? 8 : 5);
+                circle.setAttribute('fill', 'black');
+                circle.setAttribute('stroke', isHighlighted ? "#00ff9d" : "white");
+                circle.setAttribute('stroke-width', isHighlighted ? 3 : 2);
+                circle.style.transition = 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                if (isHighlighted) {
+                    circle.setAttribute('filter', 'url(#glow)');
+                }
+                g.appendChild(circle);
+
+                // --- Text Label (Group) ---
+                const textGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                textGroup.setAttribute('transform', 'translate(15, 0)');
+
+                // Background Pill
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                const textWidth = node.name.length * 8 + 20;
+                rect.setAttribute('x', -5);
+                rect.setAttribute('y', -12);
+                rect.setAttribute('width', textWidth);
+                rect.setAttribute('height', 24);
+                rect.setAttribute('rx', 4);
+                rect.setAttribute('fill', 'black');
+                rect.setAttribute('stroke', isHighlighted ? "#00ff9d" : "transparent");
+                rect.setAttribute('stroke-width', 1);
+                rect.setAttribute('opacity', isHighlighted ? 0.9 : 0.7);
+                rect.style.transition = 'all 0.3s ease';
+                textGroup.appendChild(rect);
+
+                // Text
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute('x', 0);
+                text.setAttribute('y', 5);
+                text.setAttribute('fill', isHighlighted ? "#00ff9d" : "white");
+                text.setAttribute('font-size', '14');
+                text.setAttribute('font-family', 'monospace');
+                text.setAttribute('font-weight', isHighlighted ? "bold" : "normal");
+                text.textContent = node.name;
+                text.style.pointerEvents = 'none'; // Essential for hover to work on the parent G
+                text.style.transition = 'fill 0.3s ease';
+                if (isHighlighted) {
+                    text.style.textShadow = '0 0 10px rgba(0,255,157,0.5)';
+                }
+                textGroup.appendChild(text);
+
+                g.appendChild(textGroup);
+                treeGroup.appendChild(g);
+
+                // Attach Hover Handlers
+                g.addEventListener('mouseenter', (e) => handleNodeEnter(node, e));
+                g.addEventListener('mouseleave', handleNodeLeave);
+            });
+
+            // 4. Apply current transform
+            treeGroup.setAttribute('transform', `translate(${transform.x}, ${transform.y}) scale(${transform.k})`);
+        }
+
+        /**
+         * Recursively finds all descendants of a given node in the processed node list.
+         * @param {Object} startNode - The node to start from (must have the `children` array of processed nodes).
+         * @returns {Set<number>} Set of IDs of the node and all its descendants.
+         */
+        function findDescendantIds(startNode) {
+            const ids = new Set();
+            const stack = [startNode];
+            while (stack.length > 0) {
+                const curr = stack.pop();
+                ids.add(curr.id);
+                if (curr.children) {
+                    curr.children.forEach(child => stack.push(child));
+                }
+            }
+            return ids;
+        }
+
+        // --- Event Handlers ---
+
+        function handleNodeEnter(node, event) {
+            hoveredNodeId = node.id;
+
+            const rootNode = nodes.find(n => n.parentId === null);
+            if (rootNode) {
+                const layout = calculateLayout(treeData);
+                const traversableNode = layout.nodes.find(n => n.id === node.id);
+                highlightedIds = findDescendantIds(traversableNode);
+            }
+
+            // Update Tooltip
+            tooltipText.textContent = node.description;
+            const rect = canvasContainer.getBoundingClientRect();
+            tooltip.style.left = `${event.clientX - rect.left + 20}px`;
+            tooltip.style.top = `${event.clientY - rect.top + 20}px`;
+
+            // Show the tooltip
+            tooltip.classList.remove('opacity-0', 'invisible');
+
+            renderTree();
+        }
+
+        function handleNodeLeave() {
+            // Hide the tooltip
+            hoveredNodeId = null;
+            highlightedIds.clear();
+            tooltip.classList.add('opacity-0', 'invisible');
+
+            renderTree();
+        }
+
+        function zoomIn() {
+            transform.k = Math.min(3, transform.k + 0.1);
+            renderTree();
+        }
+
+        function zoomOut() {
+            transform.k = Math.max(0.1, transform.k - 0.1);
+            renderTree();
+        }
+
+        // --- Download Logic (Refactored for robustness) ---
+        async function downloadTreeAsPNG() {
+            if (!nodes || nodes.length === 0) {
+                console.warn("Please generate a tree first before downloading.");
+                return;
+            }
+
+            // A helper to display errors, replacing alert()
+            const showMessage = (msg) => {
+                const tempDiv = document.createElement('div');
+                tempDiv.className = 'fixed top-5 left-1/2 -translate-x-1/2 bg-red-700 text-white p-3 rounded-lg shadow-xl z-[9999] transition-all duration-300';
+                tempDiv.textContent = msg;
+                document.body.appendChild(tempDiv);
+                setTimeout(() => {
+                    tempDiv.classList.add('opacity-0');
+                    setTimeout(() => tempDiv.remove(), 300);
+                }, 3000);
+            };
+
+
+            try {
+                // 1. Get current view dimensions
+                const svgContainerRect = treeSvg.getBoundingClientRect();
+                const width = svgContainerRect.width;
+                const height = svgContainerRect.height;
+
+                // Temporarily hide the tooltip for a clean image capture
+                tooltip.classList.add('opacity-0', 'invisible');
+
+                // 2. Clone and prepare the SVG for export
+                const tempSvg = treeSvg.cloneNode(true);
+                tempSvg.setAttribute('width', width);
+                tempSvg.setAttribute('height', height);
+                // Set namespaces explicitly for reliable parsing by the Image object
+                tempSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+                tempSvg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+
+                // Embed necessary styles (especially background and a reliable font)
+                const styleElement = document.createElementNS("http://www.w3.org/2000/svg", "style");
+                styleElement.textContent = `
+                    svg { background-color: black; }
+                    text { 
+                        font-family: monospace; 
+                        fill: white; 
+                    }
+                    /* Ensure node colors are set explicitly for export */
+                    .cursor-pointer circle { fill: black; }
+                    .cursor-pointer rect { fill: black; }
+                `;
+                tempSvg.prepend(styleElement);
+
+                // 3. Serialize SVG content
+                const serializer = new XMLSerializer();
+                let svgXml = serializer.serializeToString(tempSvg);
+
+                // 4. Prepend XML declaration for robust parsing
+                svgXml = '<?xml version="1.0" standalone="no"?>\n' + svgXml;
+
+                // 5. Use Blob URL for reliable, clean UTF-8 handling
+                const svgBlob = new Blob([svgXml], { type: 'image/svg+xml;charset=utf-8' });
+                const svgDataUrl = URL.createObjectURL(svgBlob);
+
+                // 6. Create Canvas and Image
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+
+                const img = new Image();
+                img.onload = function () {
+                    // 7. Draw image onto canvas
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // 8. Get PNG data URL and trigger download
+                    const pngDataUrl = canvas.toDataURL('image/png');
+                    const a = document.createElement('a');
+                    a.href = pngDataUrl;
+                    a.download = 'filesystem_concept_map.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+
+                    // 9. Cleanup
+                    URL.revokeObjectURL(svgDataUrl); // Prevent memory leak
+                    canvas.remove();
+                    img.remove();
+                };
+
+                img.onerror = function () {
+                    // Revoke the URL on error too
+                    URL.revokeObjectURL(svgDataUrl);
+                    console.error("Error loading SVG into image. Check network for issues or try a different input.");
+                    showMessage("Failed to process the visualization for download. Check the console for details.");
+                };
+
+                img.src = svgDataUrl;
+
+            } catch (e) {
+                console.error("Download failed:", e);
+                showMessage("An unexpected error occurred during download.");
+            }
+        }
+
+        // --- Pan/Drag Handlers ---
+        treeSvg.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const scaleFactor = 0.1;
+            transform.k = Math.max(0.1, Math.min(3, transform.k - Math.sign(e.deltaY) * scaleFactor));
+            renderTree();
+        });
+
+        treeSvg.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            treeSvg.classList.remove('cursor-grab');
+            treeSvg.classList.add('cursor-grabbing');
+            dragStart.x = e.clientX - transform.x;
+            dragStart.y = e.clientY - transform.y;
+        });
+
+        treeSvg.addEventListener('mousemove', (e) => {
+            if (hoveredNodeId !== null) {
+                // Update tooltip position relative to container while moving
+                const rect = canvasContainer.getBoundingClientRect();
+                tooltip.style.left = `${e.clientX - rect.left + 20}px`;
+                tooltip.style.top = `${e.clientY - rect.top + 20}px`;
+            }
+
+            if (!isDragging) return;
+            transform.x = e.clientX - dragStart.x;
+            transform.y = e.clientY - dragStart.y;
+            renderTree();
+        });
+
+        treeSvg.addEventListener('mouseup', () => {
+            isDragging = false;
+            treeSvg.classList.remove('cursor-grabbing');
+            treeSvg.classList.add('cursor-grab');
+        });
+
+        treeSvg.addEventListener('mouseleave', () => {
+            isDragging = false;
+            treeSvg.classList.remove('cursor-grabbing');
+            treeSvg.classList.add('cursor-grab');
+        });
+
+        // --- Core Generation Logic (unchanged) ---
+
+        function updateButton(loading) {
+            const loadingHtml = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-2 animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg><span>PROCESSING...</span>`;
+            const defaultHtml = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw"><path d="M21 12a9 9 0 0 0-9-9c-2.4 0-4.6 1-6.3 2.7L3 8"/><path d="M3 12a9 9 0 0 0 9 9c2.4 0 4.6-1 6.3-2.7L21 16"/><path d="M17 17v4h4"/><path d="M3 8h4V4"/></svg><span>GENERATE TREE</span>`;
+
+            generateButton.disabled = loading;
+            generateButton.innerHTML = loading ? loadingHtml : defaultHtml;
+
+            if (loading) {
+                generateButton.classList.remove('bg-white', 'text-black', 'hover:bg-gray-200');
+                generateButton.classList.add('bg-gray-800', 'cursor-wait');
+            } else {
+                generateButton.classList.add('bg-white', 'text-black', 'hover:bg-gray-200');
+                generateButton.classList.remove('bg-gray-800', 'cursor-wait');
+            }
+        }
+
+        function displayError(message) {
+            errorDisplay.textContent = message;
+            errorDisplay.classList.remove('hidden');
+        }
+
+        function clearError() {
+            errorDisplay.classList.add('hidden');
+        }
+
+        async function handleGenerate() {
+            const input = inputTextarea.value.trim();
+            if (!input) return;
+
+            updateButton(true);
+            clearError();
+            initialPlaceholder.classList.add('hidden');
+            treeGroup.innerHTML = ''; // Clear canvas temporarily
+
+            try {
+                const payload = {
+                    contents: [{ parts: [{ text: `${SYSTEM_PROMPT}\n\nInput Text:\n${input}` }] }]
+                };
+
+                let result = null;
+                const maxRetries = 5;
+                let attempt = 0;
+
+                while (attempt < maxRetries) {
+                    try {
+                        const response = await fetch(`${API_URL}?key=${apiKey}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                        result = await response.json();
+                        break; // Success
+                    } catch (e) {
+                        attempt++;
+                        if (attempt === maxRetries) throw e;
+                        const delay = Math.pow(2, attempt - 1) * 1000;
+                        await new Promise(r => setTimeout(r, delay));
+                    }
+                }
+
+                const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!textResponse) throw new Error("No data returned from AI");
+
+                // Clean Markdown code blocks if present ( ```json ... ``` )
+                const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+                treeData = JSON.parse(cleanJson);
+
+                // Calculate layout and render
+                const layout = calculateLayout(treeData);
+                nodes = layout.nodes;
+                links = layout.links;
+                renderTree();
+
+            } catch (err) {
+                displayError("Failed to generate tree. The AI might be busy or the output was malformed. Try a simpler input.");
+                console.error("Generation Error:", err);
+                // Show placeholder if no data rendered
+                if (!nodes || nodes.length === 0) {
+                    initialPlaceholder.classList.remove('hidden');
+                }
+            } finally {
+                updateButton(false);
+            }
+        }
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial render of placeholder is handled by HTML structure
+        });
+
+    </script>
+</body>
+
+</html>
